@@ -78,8 +78,7 @@ def find_quote_in_transcript(transcript, quote):
     return quote_segments
 
 
-def main():
-    quote = "let's go"
+def main(quote="let's go"):
     videos = search_youtube_videos(quote)
     for video in videos:
         video_id = video["videoId"]
@@ -96,4 +95,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    quote = input("Enter the quote you want to search for: ")
+    main(quote=quote)
