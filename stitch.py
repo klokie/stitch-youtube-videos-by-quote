@@ -13,6 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
+OUTPUT_DIR = "/tmp/downloads"
+
+#  Create the output directory if it doesn't exist
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
@@ -43,16 +47,30 @@ def get_video_transcript(video_id):
 
 def download_video(video_id):
     url = f"https://www.youtube.com/watch?v={video_id}"
-    os.system(f'youtube-dl -f best -o "downloads/{video_id}.mp4" {url}')
+    try:
+        os.system(f'youtube-dl -f best -o "downloads/{video_id}.mp4" {url}')
+        return True
+    except Exception as e:
+        print(f"Error downloading video {video_id}: {e}")
+        return False
 
 
 def extract_segments(video_id, segments):
     input_file = f"downloads/{video_id}.mp4"
+    if not os.path.exists(input_file):
+        print(f"Video file {input_file} does not exist.")
+        return
+
     for idx, segment in enumerate(segments):
         start_time = segment["start"]
         duration = segment["duration"]
         output_file = f"downloads/{video_id}_segment_{idx}.mp4"
-        ffmpeg.input(input_file, ss=start_time, t=duration).output(output_file).run()
+        try:
+            ffmpeg.input(input_file, ss=start_time, t=duration).output(
+                output_file
+            ).run()
+        except ffmpeg.Error as e:
+            print(f"FFmpeg error while processing {input_file}: {e}")
 
 
 def compile_segments(video_id, segment_count):
@@ -63,7 +81,10 @@ def compile_segments(video_id, segment_count):
     joined = ffmpeg.concat(*inputs, v=1, a=1).output(
         f"downloads/{video_id}_compiled.mp4"
     )
-    joined.run()
+    try:
+        joined.run()
+    except ffmpeg.Error as e:
+        print(f"FFmpeg error while compiling segments for {video_id}: {e}")
 
 
 def find_quote_in_transcript(transcript, quote):
@@ -86,10 +107,12 @@ def main(quote="let's go"):
         quote_segments = find_quote_in_transcript(transcript, quote)
 
         if quote_segments:
-            download_video(video_id)
-            extract_segments(video_id, quote_segments)
-            compile_segments(video_id, len(quote_segments))
-            print(f"Compiled video for {video_id} is ready!")
+            if download_video(video_id):
+                extract_segments(video_id, quote_segments)
+                compile_segments(video_id, len(quote_segments))
+                print(f"Compiled video for {video_id} is ready!")
+            else:
+                print(f"Failed to download video {video_id}")
         else:
             print(f"No matching segments found in video {video_id}")
 
