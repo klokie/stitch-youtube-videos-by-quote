@@ -59,8 +59,9 @@ def extract_segments(video_id, segments):
     input_file = f"downloads/{video_id}.mp4"
     if not os.path.exists(input_file):
         print(f"Video file {input_file} does not exist.")
-        return
+        return []
 
+    output_files = []
     for idx, segment in enumerate(segments):
         start_time = segment["start"]
         duration = segment["duration"]
@@ -69,22 +70,23 @@ def extract_segments(video_id, segments):
             ffmpeg.input(input_file, ss=start_time, t=duration).output(
                 output_file
             ).run()
+            output_files.append(output_file)
         except ffmpeg.Error as e:
             print(f"FFmpeg error while processing {input_file}: {e}")
+    return output_files
 
 
-def compile_segments(video_id, segment_count):
-    inputs = [
-        ffmpeg.input(f"downloads/{video_id}_segment_{i}.mp4")
-        for i in range(segment_count)
-    ]
-    joined = ffmpeg.concat(*inputs, v=1, a=1).output(
-        f"downloads/{video_id}_compiled.mp4"
-    )
+def compile_segments(output_files):
+    if len(output_files) < 2:
+        print("Not enough segments to concatenate.")
+        return
+
+    inputs = [ffmpeg.input(file) for file in output_files]
+    joined = ffmpeg.concat(*inputs, v=1, a=1).output("downloads/compiled_output.mp4")
     try:
         joined.run()
     except ffmpeg.Error as e:
-        print(f"FFmpeg error while compiling segments for {video_id}: {e}")
+        print(f"FFmpeg error while compiling segments: {e}")
 
 
 def find_quote_in_transcript(transcript, quote):
@@ -108,9 +110,10 @@ def main(quote="let's go"):
 
         if quote_segments:
             if download_video(video_id):
-                extract_segments(video_id, quote_segments)
-                compile_segments(video_id, len(quote_segments))
-                print(f"Compiled video for {video_id} is ready!")
+                segment_files = extract_segments(video_id, quote_segments)
+                if segment_files:
+                    compile_segments(segment_files)
+                    print(f"Compiled video for {video_id} is ready!")
             else:
                 print(f"Failed to download video {video_id}")
         else:
