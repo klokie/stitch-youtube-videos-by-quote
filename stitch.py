@@ -48,15 +48,19 @@ def get_video_transcript(video_id):
 def download_video(video_id):
     url = f"https://www.youtube.com/watch?v={video_id}"
     try:
-        os.system(f'youtube-dl -f best -o "downloads/{video_id}.mp4" {url}')
-        return True
+        os.system(f'youtube-dl -f best -o "{OUTPUT_DIR}/{video_id}.mp4" {url}')
+        if os.path.exists(f"{OUTPUT_DIR}/{video_id}.mp4"):
+            return True
+        else:
+            print(f"Failed to download video {video_id}")
+            return False
     except Exception as e:
         print(f"Error downloading video {video_id}: {e}")
         return False
 
 
 def extract_segments(video_id, segments):
-    input_file = f"downloads/{video_id}.mp4"
+    input_file = f"{OUTPUT_DIR}/{video_id}.mp4"
     if not os.path.exists(input_file):
         print(f"Video file {input_file} does not exist.")
         return []
@@ -65,7 +69,7 @@ def extract_segments(video_id, segments):
     for idx, segment in enumerate(segments):
         start_time = segment["start"]
         duration = segment["duration"]
-        output_file = f"downloads/{video_id}_segment_{idx}.mp4"
+        output_file = f"{OUTPUT_DIR}/{video_id}_segment_{idx}.mp4"
         try:
             ffmpeg.input(input_file, ss=start_time, t=duration).output(
                 output_file
@@ -82,7 +86,7 @@ def compile_segments(output_files):
         return
 
     inputs = [ffmpeg.input(file) for file in output_files]
-    joined = ffmpeg.concat(*inputs, v=1, a=1).output("downloads/compiled_output.mp4")
+    joined = ffmpeg.concat(*inputs, v=1, a=1).output("{OUTPUT_DIR}/compiled_output.mp4")
     try:
         joined.run()
     except ffmpeg.Error as e:
@@ -101,7 +105,8 @@ def find_quote_in_transcript(transcript, quote):
     return quote_segments
 
 
-def main(quote="let's go"):
+def main():
+    quote = input("Enter the quote you want to search for: ")
     videos = search_youtube_videos(quote)
     for video in videos:
         video_id = video["videoId"]
@@ -121,5 +126,4 @@ def main(quote="let's go"):
 
 
 if __name__ == "__main__":
-    quote = input("Enter the quote you want to search for: ")
-    main(quote=quote)
+    main()
