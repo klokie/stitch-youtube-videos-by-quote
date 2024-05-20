@@ -48,7 +48,7 @@ def get_video_transcript(video_id):
 def download_video(video_id):
     url = f"https://www.youtube.com/watch?v={video_id}"
     try:
-        os.system(f'youtube-dl -f best -o "{OUTPUT_DIR}/{video_id}.mp4" {url}')
+        os.system(f'yt-dlp -f best -o "{OUTPUT_DIR}/{video_id}.mp4" {url}')
         if os.path.exists(f"{OUTPUT_DIR}/{video_id}.mp4"):
             return True
         else:
@@ -86,7 +86,9 @@ def compile_segments(output_files):
         return
 
     inputs = [ffmpeg.input(file) for file in output_files]
-    joined = ffmpeg.concat(*inputs, v=1, a=1).output("{OUTPUT_DIR}/compiled_output.mp4")
+    joined = ffmpeg.concat(*inputs, v=1, a=1).output(
+        f"{OUTPUT_DIR}/compiled_output.mp4"
+    )
     try:
         joined.run()
     except ffmpeg.Error as e:
