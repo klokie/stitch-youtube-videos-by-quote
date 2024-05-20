@@ -16,7 +16,7 @@ pip install -r requirements.txt
 - add the following lines to `.env`:
 
 ```toml
-YOUTUBE_API_KEY=""
+YOUTUBE_API_KEY="YOUR_API_KEY"
 ```
 
 ## usage
